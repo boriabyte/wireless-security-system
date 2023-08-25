@@ -8,16 +8,15 @@
 #define LED_PIN1 15
 #define LED_PIN2 21
 
-int pos = 0;
-
 MFRC522 mfrc522(CS_PIN, UINT8_MAX); // Create MFRC522 instance
 
 NfcAdapter nfc = NfcAdapter(&mfrc522);
 
-// REPLACE WITH YOUR ESP RECEIVER'S MAC ADDRESS
+// REPLACE WITH YOUR ESP RECEIVER'S MAC ADDRESS - run example code in ARDUINO IDE to find MAC ADDRESS 
 uint8_t broadcastAddress1[] = {0xXX, 0xXX, 0xXX, 0xXX, 0xXX, 0xXX};
 uint8_t broadcastAddress2[] = {0xXX, 0xXX, 0xXX, 0xXX, 0xXX, 0xXX};
 
+//test structs - packages used for transmitting info - replace with what you want
 typedef struct test_struct {
 
   int x;
@@ -32,12 +31,16 @@ typedef struct test_struct2 {
 
 } test_struct2;
 
+//*******************************************************************************
+
 test_struct test;
 test_struct2 test2;
 
 esp_now_peer_info_t peerInfo;
 
-//******TRANSMITTER**********
+//**********TRANSMITTER********** - code that TRANSMITS THE DATA TO THE OTHER BOARDS
+//can be omitted - WHOLLY DEPENDS ON THE FUNCTIONALITY YOU WANT TO IMPLEMENT IN WHICH BOARD
+//example: if you ONLY WANT TO TRANSMIT, ONLY INCLUDE THIS PIECE OF CODE
 
 // callback when data is sent
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
@@ -53,9 +56,11 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 
 }
 
-//***********************
+//******************************
 
-//********RECEIVER*************
+//***********RECEIVER*********** - code that RECEIVES THE DATA FROM THE OTHER BOARDS
+//can be omitted - WHOLLY DEPENDS ON THE FUNCTIONALITY YOU WANT TO IMPLEMENT IN WHICH BOARD
+//example: if you ONLY WANT TO RECEIVE, ONLY INCLUDE THIS PIECE OF CODE
 
 void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
 
@@ -70,7 +75,7 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
 
 }
  
-//************************
+//******************************
  
 void setup() {
 
@@ -84,27 +89,30 @@ void setup() {
     Serial.println("Error initializing ESP-NOW");
     return;
   }
-  
-  esp_now_register_send_cb(OnDataSent);
-  esp_now_register_recv_cb(OnDataRecv);
+
+  //OMIT THE RESPECTIVE PIECE OF CODE IN CASE OF ONLY TRANSMITTER OR RECEIVER
+  esp_now_register_send_cb(OnDataSent); //omit if only receiver
+  esp_now_register_recv_cb(OnDataRecv); //omit if only transmitter
    
   // register peer
   peerInfo.channel = 0;  
   peerInfo.encrypt = false;
+  
   // register first peer  
   memcpy(peerInfo.peer_addr, broadcastAddress1, 6);
+  
   if (esp_now_add_peer(&peerInfo) != ESP_OK){
     Serial.println("Failed to add peer");
     return;
   }
+  
   // register second peer  
   memcpy(peerInfo.peer_addr, broadcastAddress2, 6);
   if (esp_now_add_peer(&peerInfo) != ESP_OK){
     Serial.println("Failed to add peer");
     return;
   }
-
- //Serial.println("Extended NDEF Reader\nPlace an unformatted Mifare Classic tag on the reader to show contents.");
+  
     SPI.begin();        // Init SPI bus
     mfrc522.PCD_Init(); // Init MFRC522
     nfc.begin();
@@ -113,21 +121,29 @@ void setup() {
  
 void loop() {
 
+      //TEST CONDITION - REPLACE WITH THAT YOU WISH - MODIFY CODE AT OWN WILL
+      //THIS CODE IS USING THE SECOND STRUCTURE FOR TESTING PURPOSES - CAN BE DELETED
+      /*
       if(test2.a == 5555){
 
+            //LIGHT UP LED IF CONDITION MET 
             digitalWrite(LED_PIN1, HIGH);
             delay(1500);
             digitalWrite(LED_PIN1, LOW);
             test2.a = 0;
+        
       }
       else if (test2.a != 5555 && test2.a != 0){
 
+            //LIGHT UP LED IF CONDITION NOT MET
             digitalWrite(LED_PIN2, HIGH);
             delay(1500);
             digitalWrite(LED_PIN2, LOW);
             test2.a = 0;
       }
+      */
 
+      //RFID MODULE DETECTION OF NFC CARD
       if (nfc.tagPresent())
       {
           Serial.println("Reading NFC tag");
@@ -183,9 +199,9 @@ void loop() {
                       }
                }
           }
-
+        
           if(test.x == 5555){
-
+            
             digitalWrite(LED_PIN1, HIGH);
             delay(1500);
             digitalWrite(LED_PIN1, LOW);     
@@ -198,6 +214,7 @@ void loop() {
             digitalWrite(LED_PIN2, HIGH);
             delay(1500);
             digitalWrite(LED_PIN2, LOW);
+            
             esp_err_t result = esp_now_send(0, (uint8_t *) &test, sizeof(test_struct));
           }
       
